@@ -1,0 +1,1518 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Bhavesh Kumawat // XDR-OS — Cybersecurity Portfolio</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg-0:#05080a;
+    --bg-1:#0a1015;
+    --bg-2:#0e1620;
+    --panel:#0c141c;
+    --panel-2:#0e1a24;
+    --line:#1b2833;
+    --cyan:#5ee7d1;
+    --cyan-dim:#2a7f74;
+    --amber:#ffb454;
+    --text-hi:#eaf2f2;
+    --text-mid:#9fb3b8;
+    --text-lo:#5c6e73;
+    --danger:#ff6b6b;
+    --mono:'JetBrains Mono', ui-monospace, monospace;
+    --sans:'Inter', -apple-system, sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  html,body{height:100%;}
+  body{
+    background:var(--bg-0);
+    color:var(--text-hi);
+    font-family:var(--sans);
+    overflow:hidden;
+    position:relative;
+    -webkit-tap-highlight-color:transparent;
+  }
+  ::selection{background:var(--cyan);color:#04120f;}
+  a{color:var(--cyan);}
+
+  /* ===== scanlines + vignette over everything ===== */
+  #scan{
+    position:fixed;inset:0;pointer-events:none;z-index:9999;
+    background:repeating-linear-gradient(to bottom, rgba(255,255,255,0.014) 0px, rgba(255,255,255,0.014) 1px, transparent 1px, transparent 3px);
+    opacity:.5;
+  }
+  #vignette{
+    position:fixed;inset:0;pointer-events:none;z-index:9998;
+    box-shadow:inset 0 0 160px rgba(0,0,0,0.55);
+  }
+
+  /* ================= BOOT SCREEN ================= */
+  #boot{
+    position:fixed;inset:0;background:#000;color:var(--cyan);
+    font-family:var(--mono);font-size:13px;line-height:1.7;
+    padding:28px;z-index:10000;
+    display:flex;flex-direction:column;
+    white-space:pre-wrap;
+  }
+  #boot .cursor{display:inline-block;width:8px;height:14px;background:var(--cyan);vertical-align:middle;animation:blink 1s step-end infinite;}
+  #boot-lines{flex:1;overflow:hidden;}
+  #boot .ok{color:var(--cyan);}
+  #boot .warn{color:var(--amber);}
+  #boot .dim{color:var(--text-lo);}
+  #boot.hide{opacity:0;transition:opacity .5s ease;pointer-events:none;}
+  @keyframes blink{50%{opacity:0;}}
+
+  /* ================= DESKTOP ================= */
+  #desktop{
+    position:fixed;inset:0;
+    background:
+      radial-gradient(circle at 12% 8%, rgba(94,231,209,0.06), transparent 42%),
+      radial-gradient(circle at 88% 90%, rgba(255,180,84,0.05), transparent 42%),
+      var(--bg-0);
+    opacity:0;transition:opacity .6s ease;
+  }
+  #desktop.show{opacity:1;}
+
+  #icons{
+    position:absolute;
+    top:22px;left:22px;
+    display:flex;flex-direction:column;
+    gap:6px;
+    z-index:5;
+    -webkit-user-select:none;user-select:none;
+  }
+  .icon{
+    width:96px;padding:10px 6px 8px;
+    display:flex;flex-direction:column;align-items:center;gap:8px;
+    border-radius:6px;cursor:pointer;
+    border:1px solid transparent;
+  }
+  .icon:hover{background:rgba(94,231,209,0.06);border-color:var(--line);}
+  .icon.active{background:rgba(94,231,209,0.1);border-color:var(--cyan-dim);}
+  .icon .glyph{
+    width:44px;height:44px;border-radius:8px;
+    display:flex;align-items:center;justify-content:center;
+    font-size:20px;
+    background:var(--panel);border:1px solid var(--line);
+    box-shadow:0 6px 16px -6px rgba(0,0,0,.6);
+  }
+  .icon .lbl{
+    font-family:var(--mono);font-size:10.5px;color:var(--text-mid);
+    text-align:center;line-height:1.3;
+    text-shadow:0 1px 2px rgba(0,0,0,.8);
+  }
+  .icon:hover .lbl, .icon.active .lbl{color:var(--text-hi);}
+
+  /* corner sys widget */
+  #syswidget{
+    position:absolute;top:22px;right:22px;
+    width:200px;background:rgba(12,20,28,0.7);backdrop-filter:blur(6px);
+    border:1px solid var(--line);border-radius:8px;padding:14px 16px;
+    font-family:var(--mono);z-index:5;
+  }
+  #syswidget .row{display:flex;justify-content:space-between;font-size:11px;color:var(--text-lo);margin-bottom:8px;letter-spacing:.5px;}
+  #syswidget .row:last-child{margin-bottom:0;}
+  #syswidget .row b{color:var(--cyan);font-weight:600;}
+  #syswidget .bar{width:100%;height:4px;background:var(--bg-2);border-radius:2px;margin-top:10px;overflow:hidden;}
+  #syswidget .bar i{display:block;height:100%;background:var(--cyan);width:14%;border-radius:2px;}
+
+  /* ================= WINDOWS ================= */
+  .win{
+    position:absolute;
+    min-width:300px;
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:8px;
+    box-shadow:0 30px 70px -20px rgba(0,0,0,0.7);
+    display:flex;flex-direction:column;
+    overflow:hidden;
+  }
+  .win.closed{display:none;}
+  .win.min{display:none;}
+  .win.max{
+    top:0 !important;left:0 !important;width:100% !important;height:calc(100% - 52px) !important;
+    border-radius:0;
+  }
+  .titlebar{
+    display:flex;align-items:center;gap:10px;
+    padding:10px 12px;background:#0e161d;border-bottom:1px solid var(--line);
+    cursor:grab;-webkit-user-select:none;user-select:none;
+    flex-shrink:0;
+  }
+  .titlebar:active{cursor:grabbing;}
+  .tb-dots{display:flex;gap:7px;}
+  .tb-dots span{width:11px;height:11px;border-radius:50%;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:8px;color:transparent;}
+  .tb-dots span:hover{color:rgba(0,0,0,0.55);}
+  .tb-close{background:#ff5f57;}
+  .tb-min{background:#febc2e;}
+  .tb-max{background:#28c840;}
+  .tb-title{font-family:var(--mono);font-size:11.5px;color:var(--text-mid);letter-spacing:.3px;}
+  .win-body{
+    padding:20px 22px;overflow-y:auto;flex:1;
+    font-size:14px;color:var(--text-mid);
+  }
+  .win-body::-webkit-scrollbar{width:8px;}
+  .win-body::-webkit-scrollbar-thumb{background:var(--line);border-radius:4px;}
+  .win-body h3{font-family:var(--mono);font-size:13px;color:var(--amber);letter-spacing:1px;text-transform:uppercase;margin:18px 0 10px;}
+  .win-body h3:first-child{margin-top:0;}
+  .win-body p{margin-bottom:12px;line-height:1.6;font-size:13.5px;}
+  .win-body b{color:var(--text-hi);font-weight:600;}
+
+  /* about window */
+  .focus-list{list-style:none;}
+  .focus-list li{font-family:var(--mono);font-size:12.5px;padding:9px 0;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;}
+  .focus-list li:last-child{border-bottom:none;}
+  .tag{font-size:9.5px;color:var(--cyan-dim);border:1px solid var(--cyan-dim);padding:2px 7px;border-radius:2px;letter-spacing:.5px;}
+
+  /* skills window */
+  .skill-card{margin-bottom:16px;}
+  .skill-card:last-child{margin-bottom:0;}
+  .pill-row{display:flex;flex-wrap:wrap;gap:7px;}
+  .pill{font-family:var(--mono);font-size:11px;color:var(--text-mid);border:1px solid var(--line);padding:5px 10px;border-radius:3px;background:var(--bg-1);}
+
+  /* certs window */
+  .cert-item{padding:13px 0;border-bottom:1px dashed var(--line);}
+  .cert-item:last-child{border-bottom:none;}
+  .cert-name{font-family:var(--mono);font-size:12.5px;font-weight:600;color:var(--text-hi);}
+  .cert-issuer{font-family:var(--mono);font-size:11px;color:var(--text-mid);margin-top:3px;}
+  .cert-year{font-family:var(--mono);font-size:10px;color:var(--text-lo);margin-top:2px;}
+  .cert-skills{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px;}
+  .cert-skills span{font-family:var(--mono);font-size:9px;color:var(--cyan-dim);border:1px solid var(--cyan-dim);padding:2px 6px;border-radius:2px;}
+
+  /* platforms window */
+  .stat-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-bottom:18px;}
+  .stat-card{background:var(--bg-1);border:1px solid var(--line);border-radius:6px;padding:14px;}
+  .stat-card .num{font-family:var(--mono);font-size:24px;font-weight:800;color:var(--cyan);}
+  .stat-card .lbl{font-family:var(--mono);font-size:9.5px;color:var(--text-lo);margin-top:4px;letter-spacing:.4px;}
+  .plat-card{background:var(--bg-1);border:1px solid var(--line);border-radius:6px;padding:14px 16px;display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;}
+  .plat-card:last-child{margin-bottom:0;}
+  .plat-card .name{font-family:var(--mono);font-weight:700;font-size:13px;color:var(--text-hi);}
+  .plat-card .sub{font-family:var(--mono);font-size:10.5px;color:var(--text-lo);margin-top:3px;}
+
+  /* badges window */
+  .badge-featured{
+    display:flex;gap:14px;align-items:flex-start;
+    background:linear-gradient(135deg, rgba(94,231,209,0.08), rgba(94,231,209,0.02));
+    border:1px solid var(--cyan-dim);border-radius:8px;padding:16px;margin-bottom:18px;
+  }
+  .badge-featured .bglyph{
+    width:52px;height:52px;border-radius:10px;flex-shrink:0;
+    display:flex;align-items:center;justify-content:center;font-size:26px;
+    background:var(--bg-1);border:1px solid var(--cyan-dim);
+  }
+  .badge-featured .bname{font-family:var(--mono);font-size:13.5px;font-weight:700;color:var(--text-hi);}
+  .badge-featured .bdesc{font-size:12.5px;color:var(--text-mid);margin-top:4px;line-height:1.5;}
+  .badge-featured .brarity{
+    display:inline-block;margin-top:8px;font-family:var(--mono);font-size:9.5px;
+    color:var(--amber);border:1px solid var(--amber);padding:2px 7px;border-radius:2px;letter-spacing:.5px;
+  }
+  .badge-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;}
+  .badge-card{
+    background:var(--bg-1);border:1px solid var(--line);border-radius:6px;padding:12px;
+    display:flex;flex-direction:column;gap:6px;
+  }
+  .badge-card .bglyph-sm{
+    width:34px;height:34px;border-radius:8px;
+    display:flex;align-items:center;justify-content:center;font-size:17px;
+    background:var(--bg-2);border:1px solid var(--line);
+  }
+  .badge-card .bname-sm{font-family:var(--mono);font-size:11px;font-weight:600;color:var(--text-hi);}
+  .badge-card .bdesc-sm{font-size:10.5px;color:var(--text-lo);line-height:1.4;}
+  .badge-card .brarity-sm{font-family:var(--mono);font-size:8.5px;color:var(--cyan-dim);letter-spacing:.4px;}
+  .blog-post{margin-top:8px;}
+  .blog-meta{font-family:var(--mono);font-size:10px;color:var(--text-lo);margin-bottom:10px;letter-spacing:.3px;}
+  .blog-post p{margin-bottom:12px;line-height:1.65;font-size:13px;}
+  .blog-post ul{margin:0 0 12px 18px;}
+  .blog-post li{margin-bottom:6px;line-height:1.55;font-size:12.5px;}
+
+  /* contact window */
+  .contact-list{display:flex;flex-direction:column;gap:10px;}
+  .clink{
+    display:flex;align-items:center;gap:12px;
+    font-family:var(--mono);font-size:12.5px;color:var(--text-hi);
+    padding:12px 14px;border:1px solid var(--line);border-radius:6px;background:var(--bg-1);
+    text-decoration:none;transition:all .15s ease;
+  }
+  .clink:hover{border-color:var(--cyan-dim);color:var(--cyan);text-decoration:none;background:rgba(94,231,209,0.05);}
+  .clink .ico{font-size:15px;}
+
+  /* terminal window */
+  .term-body{font-family:var(--mono);font-size:11.5px;padding:4px 0;}
+  .term-body .ln{margin-bottom:7px;white-space:normal;word-break:break-word;}
+  .term-body .p{color:var(--cyan-dim);}
+  .term-body .ok{color:var(--cyan);}
+  .term-body .warn{color:var(--amber);}
+  .term-body .txt{color:var(--text-mid);}
+
+  /* resume window */
+  .btn{
+    font-family:var(--mono);font-size:12px;font-weight:600;
+    padding:10px 18px;border-radius:3px;border:1px solid var(--cyan-dim);
+    color:var(--cyan);background:rgba(94,231,209,0.05);
+    display:inline-block;cursor:pointer;text-decoration:none;
+    transition:all .15s ease;
+  }
+  .btn:hover{background:var(--cyan);color:#04120f;text-decoration:none;}
+
+  /* ================= TASKBAR ================= */
+  #taskbar{
+    position:fixed;left:0;right:0;bottom:0;height:52px;
+    background:rgba(10,16,21,0.9);backdrop-filter:blur(10px);
+    border-top:1px solid var(--line);
+    display:flex;align-items:center;
+    padding:0 10px;gap:8px;
+    z-index:2000;
+    opacity:0;transition:opacity .6s ease;
+  }
+  #taskbar.show{opacity:1;}
+  #startbtn{
+    font-family:var(--mono);font-weight:700;font-size:12.5px;color:var(--bg-0);
+    background:var(--cyan);border:none;border-radius:5px;
+    padding:9px 14px;display:flex;align-items:center;gap:8px;cursor:pointer;
+    flex-shrink:0;
+  }
+  #startbtn:hover{box-shadow:0 0 18px rgba(94,231,209,0.4);}
+  #tasksep{width:1px;height:26px;background:var(--line);flex-shrink:0;}
+  #tasklist{display:flex;gap:6px;overflow-x:auto;flex:1;}
+  .taskitem{
+    font-family:var(--mono);font-size:11.5px;color:var(--text-mid);
+    background:var(--bg-1);border:1px solid var(--line);border-radius:5px;
+    padding:8px 14px;cursor:pointer;white-space:nowrap;flex-shrink:0;
+    display:flex;align-items:center;gap:7px;
+  }
+  .taskitem.active{border-color:var(--cyan-dim);color:var(--cyan);background:rgba(94,231,209,0.06);}
+  .taskitem .dot{width:6px;height:6px;border-radius:50%;background:var(--cyan);}
+  #clockwrap{
+    font-family:var(--mono);font-size:12px;color:var(--text-mid);
+    text-align:right;flex-shrink:0;padding-right:6px;
+  }
+  #clockwrap .time{color:var(--text-hi);font-weight:600;}
+
+  /* ===== start menu ===== */
+  #startmenu{
+    position:fixed;bottom:60px;left:10px;width:250px;
+    background:var(--panel);border:1px solid var(--line);border-radius:8px;
+    box-shadow:0 20px 50px -10px rgba(0,0,0,.7);
+    padding:10px;z-index:2500;
+    display:none;
+  }
+  #startmenu.open{display:block;}
+  #startmenu .sm-head{font-family:var(--mono);font-size:11px;color:var(--text-lo);padding:8px 10px;letter-spacing:1px;text-transform:uppercase;}
+  .sm-item{
+    display:flex;align-items:center;gap:10px;
+    padding:9px 10px;border-radius:5px;cursor:pointer;
+    font-family:var(--mono);font-size:12.5px;color:var(--text-mid);
+  }
+  .sm-item:hover{background:rgba(94,231,209,0.08);color:var(--text-hi);}
+
+  /* ===== matrix rain backdrop ===== */
+  #matrix{
+    position:absolute;inset:0;z-index:0;opacity:.16;pointer-events:none;
+  }
+
+  /* ===== hero widget ===== */
+  #hero{
+    position:absolute;right:22px;bottom:74px;width:290px;
+    background:rgba(12,20,28,0.72);backdrop-filter:blur(8px);
+    border:1px solid var(--line);border-radius:10px;
+    padding:18px 18px 16px;z-index:5;
+    transition:opacity .25s ease, transform .25s ease;
+  }
+  #hero.hidden{display:none;}
+  #hero .hclose{
+    position:absolute;top:10px;right:10px;width:22px;height:22px;
+    display:flex;align-items:center;justify-content:center;
+    border-radius:50%;border:1px solid var(--line);
+    color:var(--text-lo);font-size:12px;line-height:1;cursor:pointer;
+    background:var(--bg-1);
+  }
+  #hero .hclose:hover{border-color:var(--danger);color:var(--danger);}
+  #hero .hname{font-family:var(--mono);font-weight:800;font-size:16px;color:var(--text-hi);}
+  #hero .hhandle{font-family:var(--mono);font-size:11px;color:var(--cyan);margin-top:2px;}
+  #hero .hrole{font-family:var(--mono);font-size:11.5px;color:var(--text-mid);margin:10px 0 14px;min-height:16px;}
+  #hero .hrole .caret{display:inline-block;width:6px;height:12px;background:var(--cyan);margin-left:2px;vertical-align:middle;animation:blink 1s step-end infinite;}
+  #hero .hstatus{display:flex;align-items:center;gap:6px;font-family:var(--mono);font-size:10.5px;color:var(--text-lo);margin-bottom:14px;}
+  #hero .hstatus .d{width:6px;height:6px;border-radius:50%;background:var(--cyan);box-shadow:0 0 6px var(--cyan);}
+  #hero .hactions{display:flex;flex-wrap:wrap;gap:7px;}
+  #hero .hbtn{
+    font-family:var(--mono);font-size:10.5px;color:var(--text-mid);
+    border:1px solid var(--line);border-radius:4px;padding:7px 10px;
+    background:var(--bg-1);cursor:pointer;
+  }
+  #hero .hbtn:hover{border-color:var(--cyan-dim);color:var(--cyan);}
+
+  /* ===== editable mode ===== */
+  .win-body.editable[contenteditable="true"]{
+    outline:1px dashed var(--cyan-dim);outline-offset:-4px;
+    cursor:text;
+  }
+  .win-body.editable[contenteditable="true"]:focus{outline:1px solid var(--cyan);}
+  #editbanner{
+    position:fixed;top:0;left:0;right:0;z-index:5500;
+    background:var(--amber);color:#241a03;
+    font-family:var(--mono);font-size:11.5px;font-weight:700;
+    text-align:center;padding:7px;display:none;letter-spacing:.4px;
+  }
+  #editbanner.show{display:block;}
+
+  /* ===== admin gear button ===== */
+  #adminbtn{
+    background:transparent;border:1px solid var(--line);color:var(--text-lo);
+    border-radius:5px;width:34px;height:34px;flex-shrink:0;cursor:pointer;
+    font-size:14px;margin-right:4px;
+  }
+  #adminbtn:hover{border-color:var(--cyan-dim);color:var(--cyan);}
+  #adminbtn.logged{color:var(--cyan);border-color:var(--cyan-dim);}
+
+  /* ===== modal (login) ===== */
+  .modal-overlay{
+    position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:6000;
+    display:none;align-items:center;justify-content:center;
+  }
+  .modal-overlay.open{display:flex;}
+  .modal-box{
+    width:300px;background:var(--panel);border:1px solid var(--line);
+    border-radius:8px;padding:22px;box-shadow:0 30px 70px -20px rgba(0,0,0,.8);
+  }
+  .modal-box h4{font-family:var(--mono);font-size:13px;color:var(--amber);letter-spacing:1px;text-transform:uppercase;margin-bottom:14px;}
+  .modal-box input{
+    width:100%;background:var(--bg-1);border:1px solid var(--line);border-radius:5px;
+    color:var(--text-hi);font-family:var(--mono);font-size:13px;padding:10px 12px;margin-bottom:12px;
+  }
+  .modal-box input:focus{outline:none;border-color:var(--cyan-dim);}
+  .modal-row{display:flex;gap:8px;margin-top:6px;}
+  .modal-row .btn{flex:1;text-align:center;}
+  .modal-err{font-family:var(--mono);font-size:10.5px;color:var(--danger);margin:-6px 0 10px;min-height:12px;}
+
+  /* ===== admin panel window contents ===== */
+  .adm-block{margin-bottom:18px;}
+  .adm-block:last-child{margin-bottom:0;}
+  .adm-row{display:flex;gap:8px;margin-bottom:8px;}
+  .adm-row .btn{font-size:11px;padding:8px 12px;}
+  .qa-entry{
+    border:1px solid var(--line);border-radius:6px;padding:10px 12px;margin-bottom:10px;background:var(--bg-1);
+  }
+  .qa-entry label{display:block;font-family:var(--mono);font-size:9.5px;color:var(--text-lo);letter-spacing:.5px;margin:6px 0 3px;}
+  .qa-entry label:first-child{margin-top:0;}
+  .qa-entry [contenteditable]{
+    font-family:var(--mono);font-size:12px;color:var(--text-hi);
+    border:1px dashed var(--line);border-radius:4px;padding:6px 8px;min-height:14px;
+  }
+  .qa-entry [contenteditable]:focus{outline:none;border-color:var(--cyan-dim);}
+  .qa-del{font-family:var(--mono);font-size:10px;color:var(--danger);cursor:pointer;float:right;}
+
+  /* ===== resume window ===== */
+  .res-head{border-bottom:1px solid var(--line);padding-bottom:14px;margin-bottom:16px;}
+  .res-head .rn{font-family:var(--mono);font-weight:800;font-size:18px;color:var(--text-hi);}
+  .res-head .rr{font-family:var(--mono);font-size:11.5px;color:var(--cyan);margin-top:4px;}
+  .res-head .rc{font-family:var(--mono);font-size:10.5px;color:var(--text-lo);margin-top:8px;}
+
+  /* ===== ask-me terminal ===== */
+  #askOut{font-family:var(--mono);font-size:12px;height:200px;overflow-y:auto;margin-bottom:10px;}
+  #askOut .qline{color:var(--amber);margin-bottom:4px;}
+  #askOut .aline{color:var(--text-mid);margin-bottom:14px;padding-left:10px;border-left:2px solid var(--cyan-dim);}
+  #askOut .aline a{color:var(--cyan);}
+  #askForm{display:flex;gap:8px;}
+  #askInput{
+    flex:1;background:var(--bg-1);border:1px solid var(--line);border-radius:5px;
+    color:var(--text-hi);font-family:var(--mono);font-size:12.5px;padding:9px 12px;
+  }
+  #askInput:focus{outline:none;border-color:var(--cyan-dim);}
+
+  /* ===== game window ===== */
+  #gameArea{
+    position:relative;width:100%;height:280px;background:var(--bg-1);
+    border:1px solid var(--line);border-radius:6px;overflow:hidden;margin-bottom:12px;
+  }
+  #gameArea .threat{
+    position:absolute;font-size:22px;cursor:pointer;user-select:none;
+    filter:drop-shadow(0 0 6px rgba(255,107,107,.5));
+  }
+  #gameArea .server{
+    position:absolute;bottom:0;left:0;right:0;height:8px;
+    background:linear-gradient(to top, var(--cyan-dim), transparent);
+  }
+  #gameHUD{display:flex;justify-content:space-between;font-family:var(--mono);font-size:11.5px;color:var(--text-mid);margin-bottom:10px;}
+  #gameHUD b{color:var(--cyan);}
+  #gameOverlay{
+    position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;
+    background:rgba(5,8,10,0.85);gap:12px;text-align:center;padding:20px;
+  }
+  #gameOverlay .got{font-family:var(--mono);font-size:15px;color:var(--text-hi);}
+  #gameOverlay .gos{font-family:var(--mono);font-size:11px;color:var(--text-lo);}
+
+  /* ================= MOBILE ================= */
+  @media (max-width:720px){
+    #icons{gap:2px;top:16px;left:12px;}
+    .icon{width:78px;}
+    .icon .glyph{width:38px;height:38px;font-size:16px;}
+    .icon .lbl{font-size:9.5px;}
+    #syswidget{display:none;}
+    #hero{
+      right:12px;left:12px;bottom:64px;width:auto;
+      padding:14px 40px 14px 14px;
+    }
+    #hero .hactions{gap:6px;}
+    #hero .hbtn{font-size:10.5px;padding:7px 10px;}
+    .win{
+      left:4% !important;top:8% !important;width:92% !important;height:76% !important;
+    }
+    .win-body{padding:16px 16px;}
+    .stat-grid{grid-template-columns:1fr 1fr;}
+    #tasklist .taskitem span.tt{display:none;}
+  }
+</style>
+</head>
+<body>
+
+<div id="scan"></div>
+<div id="vignette"></div>
+
+<!-- ================= BOOT SCREEN ================= -->
+<div id="boot">
+  <div id="boot-lines"></div>
+</div>
+
+<!-- ================= DESKTOP ================= -->
+<div id="desktop">
+
+  <canvas id="matrix"></canvas>
+
+  <div id="icons">
+    <div class="icon" data-win="about"><div class="glyph">🗂️</div><div class="lbl">about.log</div></div>
+    <div class="icon" data-win="skills"><div class="glyph">🧠</div><div class="lbl">stack.json</div></div>
+    <div class="icon" data-win="education"><div class="glyph">🎓</div><div class="lbl">education.cfg</div></div>
+    <div class="icon" data-win="platforms"><div class="glyph">📡</div><div class="lbl">platforms.sh</div></div>
+    <div class="icon" data-win="badges"><div class="glyph">🏅</div><div class="lbl">badges.log</div></div>
+    <div class="icon" data-win="resume"><div class="glyph">📄</div><div class="lbl">resume.pdf</div></div>
+    <div class="icon" data-win="askme"><div class="glyph">💬</div><div class="lbl">ask-me.exe</div></div>
+    <div class="icon" data-win="game"><div class="glyph">🎮</div><div class="lbl">game.exe</div></div>
+    <div class="icon" data-win="contact"><div class="glyph">✉️</div><div class="lbl">contact.sh</div></div>
+    <div class="icon" data-win="terminal"><div class="glyph">🖥️</div><div class="lbl">soc-feed.exe</div></div>
+  </div>
+
+  <div id="hero">
+    <div class="hclose" id="heroClose" title="Dismiss">✕</div>
+    <div class="hname">Bhavesh Kumawat</div>
+    <div class="hhandle">// BhaveshXDR</div>
+    <div class="hrole" id="heroRole"></div>
+    <div class="hstatus"><span class="d"></span> Open to opportunities · Bengaluru, IN</div>
+    <div class="hactions">
+      <div class="hbtn" data-open="resume">📄 Resume</div>
+      <div class="hbtn" data-open="askme">💬 Ask me</div>
+      <div class="hbtn" data-open="game">🎮 Play</div>
+      <div class="hbtn" data-open="contact">✉️ Contact</div>
+    </div>
+  </div>
+
+  <div id="syswidget">
+    <div class="row"><span>STATUS</span><b>SECURE</b></div>
+    <div class="row"><span>OS</span><b>XDR-OS v1.0</b></div>
+    <div class="row"><span>USER</span><b>bhavesh</b></div>
+    <div class="bar"><i></i></div>
+  </div>
+
+  <!-- ===== WINDOW: ABOUT ===== -->
+  <div class="win closed" id="win-about" style="width:480px;top:70px;left:150px;">
+    <div class="titlebar">
+      <div class="tb-dots">
+        <span class="tb-close" data-act="close"></span>
+        <span class="tb-min" data-act="min"></span>
+        <span class="tb-max" data-act="max"></span>
+      </div>
+      <div class="tb-title">about.log — bhavesh@xdr</div>
+    </div>
+    <div class="win-body editable" data-editable="true">
+      <h3>// who's behind the terminal</h3>
+      <p>I'm a <b>Cybersecurity &amp; Data Science</b> undergraduate at Garden City University, Bengaluru, currently building hands-on experience across offensive and defensive security. My focus spans Linux systems, network security, OSINT reconnaissance, and vulnerability assessment — with a growing interest in Extended Detection &amp; Response (XDR) and threat analysis workflows.</p>
+      <p>I train regularly on TryHackMe (handle: <b>BhaveshXDR</b>), working through red-vs-blue scenarios, privilege escalation, and defensive-tooling challenges to sharpen both attack and detection skills. Data science is the other half of my toolkit — I like turning raw security telemetry into something a defender can actually act on.</p>
+      <h3>// focus areas</h3>
+      <ul class="focus-list">
+        <li><b>Ethical Hacking</b><span class="tag">OFFENSIVE</span></li>
+        <li><b>OSINT</b><span class="tag">RECON</span></li>
+        <li><b>Network Security</b><span class="tag">DEFENSE</span></li>
+        <li><b>Vulnerability Assessment</b><span class="tag">AUDIT</span></li>
+        <li><b>Threat Analysis</b><span class="tag">XDR</span></li>
+        <li><b>Linux Security</b><span class="tag">SYSTEMS</span></li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- ===== WINDOW: SKILLS ===== -->
+  <div class="win closed" id="win-skills" style="width:420px;top:110px;left:300px;">
+    <div class="titlebar">
+      <div class="tb-dots">
+        <span class="tb-close" data-act="close"></span>
+        <span class="tb-min" data-act="min"></span>
+        <span class="tb-max" data-act="max"></span>
+      </div>
+      <div class="tb-title">stack.json — read only</div>
+    </div>
+    <div class="win-body editable" data-editable="true">
+      <div class="skill-card"><h3>Languages &amp; Scripting</h3><div class="pill-row">
+        <span class="pill">Python</span><span class="pill">Bash Script</span><span class="pill">JWT</span>
+      </div></div>
+      <div class="skill-card"><h3>Frameworks &amp; Backend</h3><div class="pill-row">
+        <span class="pill">FastAPI</span><span class="pill">Flask</span><span class="pill">Django</span><span class="pill">Node.js</span><span class="pill">React</span><span class="pill">RabbitMQ</span><span class="pill">Swagger</span>
+      </div></div>
+      <div class="skill-card"><h3>Data &amp; Databases</h3><div class="pill-row">
+        <span class="pill">MySQL</span><span class="pill">MS SQL Server</span><span class="pill">MongoDB</span><span class="pill">SQLite</span><span class="pill">Pandas</span><span class="pill">Matplotlib</span>
+      </div></div>
+      <div class="skill-card"><h3>Cloud &amp; Infra</h3><div class="pill-row">
+        <span class="pill">Google Cloud</span><span class="pill">Apache</span><span class="pill">Cloudflare</span>
+      </div></div>
+      <div class="skill-card"><h3>Dev Tooling</h3><div class="pill-row">
+        <span class="pill">Git</span><span class="pill">GitHub</span><span class="pill">npm</span><span class="pill">TestingLibrary</span><span class="pill">Notion</span>
+      </div></div>
+      <div class="skill-card"><h3>Security Practice</h3><div class="pill-row">
+        <span class="pill">OSINT</span><span class="pill">Network Security</span><span class="pill">Vulnerability Assessment</span><span class="pill">Linux Hardening</span><span class="pill">Threat Analysis</span>
+      </div></div>
+    </div>
+  </div>
+
+  <!-- ===== WINDOW: EDUCATION / CERTS ===== -->
+  <div class="win closed" id="win-education" style="width:420px;top:90px;left:200px;">
+    <div class="titlebar">
+      <div class="tb-dots">
+        <span class="tb-close" data-act="close"></span>
+        <span class="tb-min" data-act="min"></span>
+        <span class="tb-max" data-act="max"></span>
+      </div>
+      <div class="tb-title">education.cfg — credentials on file</div>
+    </div>
+    <div class="win-body editable" data-editable="true">
+      <h3>🎓 Education</h3>
+      <p><b>B.Sc — Cybersecurity &amp; Data Science</b><br>Garden City University, Bengaluru, India<br><span style="color:var(--text-lo);font-family:var(--mono);font-size:11px;">In progress</span></p>
+      <h3>📜 Certifications</h3>
+      <div class="cert-item">
+        <div class="cert-name">Introduction to Cyber Security</div>
+        <div class="cert-issuer">Issued by: TryHackMe</div>
+        <div class="cert-year">2026</div>
+        <div class="cert-skills"><span>Cybersecurity</span><span>Networking</span><span>Linux</span></div>
+      </div>
+      <div class="cert-item">
+        <div class="cert-name">Network Security Fundamentals</div>
+        <div class="cert-issuer">Issued by: Your Certification Provider</div>
+        <div class="cert-year">2026</div>
+        <div class="cert-skills"><span>Network Security</span><span>Defense</span><span>TCP/IP</span></div>
+      </div>
+      <div class="cert-item">
+        <div class="cert-name">Linux Security &amp; Administration</div>
+        <div class="cert-issuer">Issued by: Your Certification Provider</div>
+        <div class="cert-year">2026</div>
+        <div class="cert-skills"><span>Linux</span><span>Hardening</span><span>Security</span></div>
+      </div>
+      <p style="margin-top:14px;"><a href="https://www.linkedin.com/in/bhavesh-kumawat-m-566a47339/" target="_blank" rel="noopener noreferrer">View all certificates on LinkedIn ↗</a></p>
+    </div>
+  </div>
+
+  <!-- ===== WINDOW: PLATFORMS ===== -->
+  <div class="win closed" id="win-platforms" style="width:400px;top:130px;left:340px;">
+    <div class="titlebar">
+      <div class="tb-dots">
+        <span class="tb-close" data-act="close"></span>
+        <span class="tb-min" data-act="min"></span>
+        <span class="tb-max" data-act="max"></span>
+      </div>
+      <div class="tb-title">platforms.sh — where I train &amp; build</div>
+    </div>
+    <div class="win-body editable" data-editable="true">
+      <div class="stat-grid">
+        <div class="stat-card"><div class="num">29</div><div class="lbl">GITHUB COMMITS (LAST YR)</div></div>
+        <div class="stat-card"><div class="num">38</div><div class="lbl">TOTAL CONTRIBUTIONS</div></div>
+        <div class="stat-card"><div class="num">6</div><div class="lbl">LONGEST STREAK (DAYS)</div></div>
+        <div class="stat-card"><div class="num">4</div><div class="lbl">PULL REQUESTS</div></div>
+      </div>
+      <div class="plat-card"><div><div class="name">TryHackMe</div><div class="sub">@BhaveshXDR — CTF rooms, red/blue exercises</div></div><a class="btn" href="https://tryhackme.com/p/BhaveshXDR" target="_blank" rel="noopener">visit →</a></div>
+      <div class="plat-card"><div><div class="name">GitHub</div><div class="sub">@BhaveshXDR — code, tooling &amp; writeups</div></div><a class="btn" href="https://github.com/BhaveshXDR" target="_blank" rel="noopener">visit →</a></div>
+      <div class="plat-card"><div><div class="name">LinkedIn</div><div class="sub">certifications &amp; professional profile</div></div><a class="btn" href="https://www.linkedin.com/in/bhavesh-kumawat-m-566a47339/" target="_blank" rel="noopener noreferrer">visit →</a></div>
+    </div>
+  </div>
+
+  <!-- ===== WINDOW: BADGES ===== -->
+  <div class="win closed" id="win-badges" style="width:460px;top:100px;left:260px;">
+    <div class="titlebar">
+      <div class="tb-dots">
+        <span class="tb-close" data-act="close"></span>
+        <span class="tb-min" data-act="min"></span>
+        <span class="tb-max" data-act="max"></span>
+      </div>
+      <div class="tb-title">badges.log — tryhackme://BhaveshXDR</div>
+    </div>
+    <div class="win-body editable" data-editable="true">
+      <h3>🏅 Featured Badge</h3>
+      <div class="badge-featured">
+        <div class="bglyph">🛡️</div>
+        <div>
+          <div class="bname">SOC Level-Up</div>
+          <div class="bdesc">Begin your journey as a SOC L2 analyst — awarded for starting the SOC Level 2 analyst learning path on TryHackMe.</div>
+          <span class="brarity">EPIC · 0% of learners hold this</span>
+        </div>
+      </div>
+
+      <h3>📦 All Badges</h3>
+      <div class="badge-grid">
+        <div class="badge-card">
+          <div class="bglyph-sm">🎓</div>
+          <div class="bname-sm">Intro to Security Engineering</div>
+          <div class="bdesc-sm">Completed the Security Engineer Intro room</div>
+          <div class="brarity-sm">RARE · 4.1%</div>
+        </div>
+        <div class="badge-card">
+          <div class="bglyph-sm">🥉</div>
+          <div class="bname-sm">Bronze League</div>
+          <div class="bdesc-sm">Bronze League 1st place</div>
+          <div class="brarity-sm">RARE · 1.9%</div>
+        </div>
+        <div class="badge-card">
+          <div class="bglyph-sm">🥈</div>
+          <div class="bname-sm">Silver League</div>
+          <div class="bdesc-sm">Silver League 1st place</div>
+          <div class="brarity-sm">EPIC · 0.8%</div>
+        </div>
+        <div class="badge-card">
+          <div class="bglyph-sm">🌍</div>
+          <div class="bname-sm">3 Million Legend</div>
+          <div class="bdesc-sm">Solved any room in the 3 Million Users Special Module</div>
+          <div class="brarity-sm">EPIC · 0.8%</div>
+        </div>
+        <div class="badge-card">
+          <div class="bglyph-sm">🔥</div>
+          <div class="bname-sm">7 Day Streak</div>
+          <div class="bdesc-sm">Achieved a 7 day hacking streak</div>
+          <div class="brarity-sm">COMMON · 17.2%</div>
+        </div>
+        <div class="badge-card">
+          <div class="bglyph-sm">🔥</div>
+          <div class="bname-sm">3 Day Streak</div>
+          <div class="bdesc-sm">Achieved a 3 day hacking streak</div>
+          <div class="brarity-sm">COMMON · 11.3%</div>
+        </div>
+      </div>
+
+      <h3>📝 Blog — Levelling Up to SOC L2</h3>
+      <div class="blog-post">
+        <div class="blog-meta">POSTED BY BHAVESHXDR · TRYHACKME PATH LOG</div>
+        <p>Earning the <b>SOC Level-Up</b> badge marked the point where my TryHackMe grind shifted from scattered CTF rooms into a structured path: thinking like a SOC L2 analyst instead of just solving rooms for the sake of it. It's currently sitting at 0% epic rarity on my profile, which tells me most learners either haven't reached this stage yet or haven't stuck with the path long enough to unlock it.</p>
+        <p>Getting here wasn't about one big win — it was the accumulation of smaller ones. Streak badges (3-day, 7-day) kept me consistent. League placements (Bronze, Silver — both 1st place) pushed me to compete on time and accuracy, not just correctness. And the <b>3 Million Legend</b> badge came from clearing a room in TryHackMe's special anniversary module, which was a good excuse to explore a corner of the platform I hadn't touched yet.</p>
+        <p>What actually changed in how I work, moving from L1-style thinking into L2:</p>
+        <ul>
+          <li><b>Triage before action.</b> Instead of reacting to every alert individually, I started grouping them by asset and looking for patterns — is this one failed login, or is it part of a spray?</li>
+          <li><b>Context over signatures.</b> An IOC alone doesn't tell the full story. I now cross-reference against baseline behavior for that host or user before deciding if something is truly anomalous.</li>
+          <li><b>Documentation as a skill, not a chore.</b> Every room I clear now gets a short writeup — what the alert was, what I checked, what I concluded, and why. That habit alone made my SOC-style reasoning noticeably sharper.</li>
+          <li><b>Escalation judgment.</b> Knowing when something is a false positive versus when it needs to go up the chain is its own skill — the SOC L2 path pushes you to practice that call, not just detect the issue.</li>
+        </ul>
+        <p>Next on the path: pushing further into the SOC Level 2 analyst track, layering in more detection-engineering practice, and feeding what I learn back into my <a href="https://github.com/BhaveshXDR/homelab-xdr-dashboard" target="_blank" rel="noopener">home-lab XDR dashboard</a> project so the theory turns into something I actually built and can point to.</p>
+        <p>Full badge history and live progress: <a href="https://tryhackme.com/p/BhaveshXDR" target="_blank" rel="noopener">tryhackme.com/p/BhaveshXDR</a></p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== WINDOW: CONTACT ===== -->
+  <div class="win closed" id="win-contact" style="width:340px;top:150px;left:420px;">
+    <div class="titlebar">
+      <div class="tb-dots">
+        <span class="tb-close" data-act="close"></span>
+        <span class="tb-min" data-act="min"></span>
+        <span class="tb-max" data-act="max"></span>
+      </div>
+      <div class="tb-title">contact.sh — open channel</div>
+    </div>
+    <div class="win-body editable" data-editable="true">
+      <p style="font-family:var(--mono);font-size:12px;color:var(--cyan-dim);margin-bottom:16px;">// let's talk security</p>
+      <div class="contact-list">
+        <a class="clink" href="mailto:bhavesh2005k@gmail.com"><span class="ico">✉</span> Email</a>
+        <a class="clink" href="https://t.me/BhaveshXDR" target="_blank" rel="noopener"><span class="ico">📨</span> Telegram</a>
+        <a class="clink" href="https://twitter.com/MortalXTJ" target="_blank" rel="noopener"><span class="ico">𝕏</span> Twitter / X</a>
+        <a class="clink" href="https://github.com/BhaveshXDR" target="_blank" rel="noopener"><span class="ico">🐙</span> GitHub</a>
+        <a class="clink" href="https://www.linkedin.com/in/bhavesh-kumawat-m-566a47339/" target="_blank" rel="noopener noreferrer"><span class="ico">💼</span> LinkedIn</a>
+        <a class="clink" href="https://tryhackme.com/p/BhaveshXDR" target="_blank" rel="noopener"><span class="ico">🎯</span> TryHackMe</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== WINDOW: RESUME ===== -->
+  <div class="win closed" id="win-resume" style="width:420px;top:80px;left:250px;">
+    <div class="titlebar">
+      <div class="tb-dots">
+        <span class="tb-close" data-act="close"></span>
+        <span class="tb-min" data-act="min"></span>
+        <span class="tb-max" data-act="max"></span>
+      </div>
+      <div class="tb-title">resume.pdf</div>
+    </div>
+    <div class="win-body editable" data-editable="true">
+      <div class="res-head">
+        <div class="rn">Bhavesh Kumawat</div>
+        <div class="rr">Cybersecurity &amp; Data Science Student</div>
+        <div class="rc">Bengaluru, Karnataka, India · bhavesh2005k@gmail.com · linkedin.com/in/bhavesh-kumawat-m-566a47339</div>
+      </div>
+      <h3>Summary</h3>
+      <p>Cybersecurity &amp; Data Science undergraduate focused on ethical hacking, OSINT, network security, and vulnerability assessment. Trains regularly on TryHackMe (BhaveshXDR) across red-vs-blue scenarios, and builds full-stack tooling around FastAPI, Flask, Django, Node.js, and React.</p>
+      <h3>Education</h3>
+      <p><b>B.Sc — Cybersecurity &amp; Data Science</b><br>Garden City University, Bengaluru, India — In progress</p>
+      <h3>Certifications</h3>
+      <p>Introduction to Cyber Security (TryHackMe, 2026) · Network Security Fundamentals (2026) · Linux Security &amp; Administration (2026)</p>
+      <h3>Skills</h3>
+      <p>Python, Bash, FastAPI, Flask, Django, Node.js, React, MySQL, MongoDB, Pandas, Git, OSINT, Network Security, Vulnerability Assessment, Linux Hardening.</p>
+      <h3>Links</h3>
+      <p>GitHub: github.com/BhaveshXDR · TryHackMe: tryhackme.com/p/BhaveshXDR</p>
+    </div>
+    <div style="padding:0 22px 18px;flex-shrink:0;">
+      <button class="btn" id="printResumeBtn" style="width:100%;text-align:center;">🖨️ Print / Save as PDF</button>
+    </div>
+  </div>
+
+  <!-- ===== WINDOW: ASK ME (Q&A TERMINAL) ===== -->
+  <div class="win closed" id="win-askme" style="width:400px;top:120px;left:280px;">
+    <div class="titlebar">
+      <div class="tb-dots">
+        <span class="tb-close" data-act="close"></span>
+        <span class="tb-min" data-act="min"></span>
+        <span class="tb-max" data-act="max"></span>
+      </div>
+      <div class="tb-title">ask-me.exe — ask about bhavesh</div>
+    </div>
+    <div class="win-body">
+      <div id="askOut"></div>
+      <form id="askForm">
+        <input id="askInput" type="text" placeholder="e.g. what are your skills?" autocomplete="off">
+      </form>
+    </div>
+  </div>
+
+  <!-- ===== WINDOW: GAME ===== -->
+  <div class="win closed" id="win-game" style="width:380px;top:160px;left:320px;">
+    <div class="titlebar">
+      <div class="tb-dots">
+        <span class="tb-close" data-act="close"></span>
+        <span class="tb-min" data-act="min"></span>
+        <span class="tb-max" data-act="max"></span>
+      </div>
+      <div class="tb-title">game.exe — packet intercept</div>
+    </div>
+    <div class="win-body">
+      <div id="gameHUD"><span>SCORE: <b id="gScore">0</b></span><span>LIVES: <b id="gLives">3</b></span></div>
+      <div id="gameArea">
+        <div class="server"></div>
+        <div id="gameOverlay">
+          <div class="got">Defend the firewall</div>
+          <div class="gos">Click the incoming threats before they reach the server.</div>
+          <button class="btn" id="gStartBtn">▶ Start</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== WINDOW: ADMIN PANEL ===== -->
+  <div class="win closed" id="win-adminpanel" style="width:400px;top:80px;left:180px;">
+    <div class="titlebar">
+      <div class="tb-dots">
+        <span class="tb-close" data-act="close"></span>
+        <span class="tb-min" data-act="min"></span>
+        <span class="tb-max" data-act="max"></span>
+      </div>
+      <div class="tb-title">admin.panel — edit mode</div>
+    </div>
+    <div class="win-body">
+      <div class="adm-block">
+        <h3>Edit Mode</h3>
+        <p style="font-size:12px;">Toggle editing, then click into any window text (About, Skills, Education, Platforms, Contact, Resume) to change it directly.</p>
+        <div class="adm-row">
+          <button class="btn" id="toggleEditBtn" style="flex:1;text-align:center;">✏️ Turn Edit Mode ON</button>
+        </div>
+      </div>
+      <div class="adm-block">
+        <h3>Ask-Me Knowledge Base</h3>
+        <p style="font-size:12px;">Each entry needs comma-separated keywords and an answer. If nothing matches, visitors are told to use contact.sh.</p>
+        <div id="qaList"></div>
+        <div class="adm-row">
+          <button class="btn" id="addQaBtn" style="flex:1;text-align:center;">+ Add Q&amp;A</button>
+        </div>
+      </div>
+      <div class="adm-block">
+        <h3>Save &amp; Deploy</h3>
+        <p style="font-size:12px;">Edits auto-save to this browser only. To update the live site for everyone, export the file and re-upload it to your host.</p>
+        <div class="adm-row">
+          <button class="btn" id="exportBtn" style="flex:1;text-align:center;">⬇ Export Updated HTML</button>
+        </div>
+        <div class="adm-row">
+          <button class="btn" id="changePwBtn" style="flex:1;text-align:center;">🔒 Change Password</button>
+          <button class="btn" id="resetBtn" style="flex:1;text-align:center;">♻ Reset</button>
+        </div>
+      </div>
+      <div class="adm-block">
+        <button class="btn" id="logoutBtn" style="width:100%;text-align:center;">Log Out</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== WINDOW: TERMINAL / SOC FEED ===== -->
+  <div class="win closed" id="win-terminal" style="width:420px;top:400px;left:600px;">
+    <div class="titlebar">
+      <div class="tb-dots">
+        <span class="tb-close" data-act="close"></span>
+        <span class="tb-min" data-act="min"></span>
+        <span class="tb-max" data-act="max"></span>
+      </div>
+      <div class="tb-title">soc-feed — live</div>
+    </div>
+    <div class="win-body" style="height:220px;">
+      <div class="term-body" id="termBody"></div>
+    </div>
+  </div>
+
+  <!-- hidden default knowledge base (used to seed the Ask-Me terminal) -->
+  <div id="qaStore" style="display:none;">
+    <div class="qa-item" data-keywords="name, who are you, who is bhavesh">I'm Bhavesh Kumawat — online I go by BhaveshXDR.</div>
+    <div class="qa-item" data-keywords="what do you do, role, study, studying, major, degree, student">I'm a Cybersecurity &amp; Data Science undergraduate at Garden City University, Bengaluru — focused on ethical hacking, OSINT, network security and vulnerability assessment.</div>
+    <div class="qa-item" data-keywords="skills, tech stack, technologies, languages, programming, stack">My stack includes Python, Bash, FastAPI, Flask, Django, Node.js, React, MySQL, MongoDB, Pandas, and Git — plus security practice in OSINT, network security and vulnerability assessment. Open stack.json for the full list.</div>
+    <div class="qa-item" data-keywords="location, where are you, based, live, from">I'm based in Bengaluru, Karnataka, India.</div>
+    <div class="qa-item" data-keywords="contact, email, reach, hire, hiring, work with">Best way to reach me is via contact.sh — email is bhavesh2005k@gmail.com.</div>
+    <div class="qa-item" data-keywords="certifications, certificates, certs">I hold certifications in Introduction to Cyber Security, Network Security Fundamentals, and Linux Security &amp; Administration. Check education.cfg for details.</div>
+    <div class="qa-item" data-keywords="github, project, projects, code, repo">You can find my code and writeups on GitHub: github.com/BhaveshXDR</div>
+    <div class="qa-item" data-keywords="tryhackme, ctf, hacking practice, hackthebox">I train on TryHackMe under the handle BhaveshXDR — red-vs-blue rooms, privilege escalation, and defensive tooling challenges.</div>
+    <div class="qa-item" data-keywords="badge, badges, achievement, achievements, soc level up, soc l2">My featured badge is SOC Level-Up (Epic, 0% rarity) — I've also got Bronze &amp; Silver League 1st place, 3 Million Legend, and streak badges. Open badges.log for the full list plus a blog post on what earning SOC Level-Up taught me.</div>
+    <div class="qa-item" data-keywords="resume, cv">You can view or print my resume from the resume.pdf window on the desktop.</div>
+    <div class="qa-item" data-keywords="education, university, college, school">I'm pursuing a B.Sc in Cybersecurity &amp; Data Science at Garden City University, Bengaluru — currently in progress.</div>
+  </div>
+</div>
+
+<div id="editbanner">✏️ EDIT MODE ON — click into any window text to change it. Changes auto-save to this browser.</div>
+
+<!-- ================= LOGIN MODAL ================= -->
+<div class="modal-overlay" id="loginModal">
+  <div class="modal-box">
+    <h4>🔒 Admin Login</h4>
+    <input type="password" id="loginPw" placeholder="Password">
+    <div class="modal-err" id="loginErr"></div>
+    <div class="modal-row">
+      <button class="btn" id="loginCancel" style="text-align:center;">Cancel</button>
+      <button class="btn" id="loginSubmit" style="text-align:center;">Log In</button>
+    </div>
+  </div>
+</div>
+
+<!-- ================= CHANGE PASSWORD MODAL ================= -->
+<div class="modal-overlay" id="pwModal">
+  <div class="modal-box">
+    <h4>🔒 Change Admin Password</h4>
+    <input type="password" id="newPw1" placeholder="New password">
+    <input type="password" id="newPw2" placeholder="Confirm new password">
+    <div class="modal-err" id="pwErr"></div>
+    <div class="modal-row">
+      <button class="btn" id="pwCancel" style="text-align:center;">Cancel</button>
+      <button class="btn" id="pwSubmit" style="text-align:center;">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- ================= START MENU ================= -->
+<div id="startmenu">
+  <div class="sm-head">XDR-OS</div>
+  <div class="sm-item" data-open="about">🗂️ &nbsp;about.log</div>
+  <div class="sm-item" data-open="skills">🧠 &nbsp;stack.json</div>
+  <div class="sm-item" data-open="education">🎓 &nbsp;education.cfg</div>
+  <div class="sm-item" data-open="platforms">📡 &nbsp;platforms.sh</div>
+  <div class="sm-item" data-open="badges">🏅 &nbsp;badges.log</div>
+  <div class="sm-item" data-open="contact">✉️ &nbsp;contact.sh</div>
+  <div class="sm-item" data-open="terminal">🖥️ &nbsp;soc-feed.exe</div>
+</div>
+
+<!-- ================= TASKBAR ================= -->
+<div id="taskbar">
+  <button id="startbtn">⊞ XDR-OS</button>
+  <div id="tasksep"></div>
+  <div id="tasklist"></div>
+  <button id="adminbtn" title="Admin" style="display:none;">⚙</button>
+  <div id="clockwrap" title="">
+    <div class="time" id="clockTime">00:00:00</div>
+    <div class="date" id="clockDate">—</div>
+  </div>
+</div>
+
+<script>
+/* ================= BOOT SEQUENCE ================= */
+const bootLines = [
+  {t:"XDR-OS v1.0 — initializing kernel...", c:"txt"},
+  {t:"mounting /home/bhavesh ...", c:"txt"},
+  {t:"loading security modules: osint, netsec, vuln-scan ...", c:"ok"},
+  {t:"checking credentials ... verified", c:"ok"},
+  {t:"starting soc-feed.exe daemon ...", c:"ok"},
+  {t:"3 modules ready — nothing auto-launched, open what you need", c:"warn"},
+  {t:"threat level: nominal", c:"ok"},
+  {t:"welcome back, bhavesh.", c:"ok"},
+];
+const bootEl = document.getElementById('boot-lines');
+let bi = 0;
+function bootStep(){
+  if(bi < bootLines.length){
+    const l = bootLines[bi];
+    const div = document.createElement('div');
+    div.innerHTML = `<span class="${l.c}">&gt; ${l.t}</span>`;
+    bootEl.appendChild(div);
+    bi++;
+    setTimeout(bootStep, 220 + Math.random()*180);
+  } else {
+    setTimeout(finishBoot, 500);
+  }
+}
+function finishBoot(){
+  document.getElementById('boot').classList.add('hide');
+  setTimeout(()=>{
+    document.getElementById('boot').style.display = 'none';
+    document.getElementById('desktop').classList.add('show');
+    document.getElementById('taskbar').classList.add('show');
+  }, 500);
+}
+setTimeout(bootStep, 300);
+
+/* ================= WINDOW MANAGER ================= */
+const winIds = ['about','skills','education','platforms','badges','contact','terminal','resume','askme','game','adminpanel'];
+const winEls = {};
+winIds.forEach(id => winEls[id] = document.getElementById('win-'+id));
+let zTop = 10;
+const openWins = new Set();
+
+function bringToFront(id){
+  zTop++;
+  winEls[id].style.zIndex = zTop;
+  winIds.forEach(w => document.querySelector(`.icon[data-win="${w}"]`)?.classList.remove('active'));
+  document.querySelector(`.icon[data-win="${id}"]`)?.classList.add('active');
+  updateTasklist();
+}
+
+function openWin(id){
+  const el = winEls[id];
+  el.classList.remove('closed');
+  el.classList.remove('min');
+  openWins.add(id);
+  bringToFront(id);
+}
+function closeWin(id){
+  winEls[id].classList.add('closed');
+  openWins.delete(id);
+  updateTasklist();
+}
+function minWin(id){
+  winEls[id].classList.add('min');
+  updateTasklist();
+}
+function toggleMax(id){
+  winEls[id].classList.toggle('max');
+}
+
+function updateTasklist(){
+  const list = document.getElementById('tasklist');
+  list.innerHTML = '';
+  openWins.forEach(id=>{
+    const item = document.createElement('div');
+    item.className = 'taskitem';
+    const isTop = parseInt(winEls[id].style.zIndex||0) === zTop && !winEls[id].classList.contains('min');
+    if(isTop) item.classList.add('active');
+    item.innerHTML = `<span class="dot"></span><span class="tt">${id}.exe</span>`;
+    item.addEventListener('click', ()=>{
+      if(winEls[id].classList.contains('min')){
+        winEls[id].classList.remove('min');
+        bringToFront(id);
+      } else if(isTop){
+        minWin(id);
+      } else {
+        bringToFront(id);
+      }
+    });
+    list.appendChild(item);
+  });
+}
+
+/* icon clicks (single click opens — friendlier on touch) */
+document.querySelectorAll('.icon').forEach(icon=>{
+  icon.addEventListener('click', ()=> openWin(icon.dataset.win));
+});
+document.querySelectorAll('.sm-item').forEach(item=>{
+  item.addEventListener('click', ()=>{
+    openWin(item.dataset.open);
+    document.getElementById('startmenu').classList.remove('open');
+  });
+});
+
+/* titlebar buttons */
+winIds.forEach(id=>{
+  const el = winEls[id];
+  el.querySelector('[data-act="close"]').addEventListener('click', e=>{e.stopPropagation(); closeWin(id);});
+  el.querySelector('[data-act="min"]').addEventListener('click', e=>{e.stopPropagation(); minWin(id);});
+  el.querySelector('[data-act="max"]').addEventListener('click', e=>{e.stopPropagation(); toggleMax(id);});
+  el.addEventListener('mousedown', ()=> bringToFront(id));
+  el.addEventListener('touchstart', ()=> bringToFront(id), {passive:true});
+});
+
+/* dragging */
+winIds.forEach(id=>{
+  const el = winEls[id];
+  const bar = el.querySelector('.titlebar');
+  let dragging = false, offX = 0, offY = 0;
+
+  function start(clientX, clientY){
+    if(el.classList.contains('max')) return;
+    dragging = true;
+    const rect = el.getBoundingClientRect();
+    offX = clientX - rect.left;
+    offY = clientY - rect.top;
+    bringToFront(id);
+  }
+  function move(clientX, clientY){
+    if(!dragging) return;
+    let x = clientX - offX;
+    let y = clientY - offY;
+    x = Math.max(0, Math.min(x, window.innerWidth - 80));
+    y = Math.max(0, Math.min(y, window.innerHeight - 60));
+    el.style.left = x + 'px';
+    el.style.top = y + 'px';
+  }
+  function end(){ dragging = false; }
+
+  bar.addEventListener('mousedown', e=>{ start(e.clientX, e.clientY); });
+  window.addEventListener('mousemove', e=> move(e.clientX, e.clientY));
+  window.addEventListener('mouseup', end);
+
+  bar.addEventListener('touchstart', e=>{
+    const t = e.touches[0];
+    start(t.clientX, t.clientY);
+  }, {passive:true});
+  bar.addEventListener('touchmove', e=>{
+    const t = e.touches[0];
+    move(t.clientX, t.clientY);
+  }, {passive:true});
+  bar.addEventListener('touchend', end);
+});
+
+/* start menu toggle */
+const startBtn = document.getElementById('startbtn');
+const startMenu = document.getElementById('startmenu');
+startBtn.addEventListener('click', e=>{
+  e.stopPropagation();
+  startMenu.classList.toggle('open');
+});
+document.addEventListener('click', ()=> startMenu.classList.remove('open'));
+
+/* windows stay closed on load — user opens what they want from icons/start menu */
+
+/* ================= CLOCK ================= */
+function tickClock(){
+  const now = new Date();
+  document.getElementById('clockTime').textContent = now.toLocaleTimeString('en-IN', {hour12:false});
+  document.getElementById('clockDate').textContent = now.toLocaleDateString('en-IN', {day:'2-digit', month:'short', year:'numeric'});
+}
+tickClock();
+setInterval(tickClock, 1000);
+
+/* ================= SOC FEED (terminal content) ================= */
+const feedLines = [
+  {p:"[09:14:02]", t:"scan complete — 0 critical findings", cls:"ok"},
+  {p:"[09:14:07]", t:"asset check: linux-host-04 — hardened", cls:"txt"},
+  {p:"[09:14:11]", t:"osint sweep: 3 exposed subdomains flagged", cls:"warn"},
+  {p:"[09:14:19]", t:"nmap: 22/tcp open — ssh (auth key only)", cls:"txt"},
+  {p:"[09:14:24]", t:"vuln db sync — 0 new CVEs relevant", cls:"ok"},
+  {p:"[09:14:31]", t:"login attempt anomaly — reviewing", cls:"warn"},
+  {p:"[09:14:38]", t:"traffic baseline restored", cls:"ok"},
+  {p:"[09:14:44]", t:"threat intel feed updated", cls:"txt"},
+  {p:"[09:14:52]", t:"XDR correlation: no active incidents", cls:"ok"},
+  {p:"[09:15:01]", t:"backup integrity verified", cls:"txt"},
+];
+const termBody = document.getElementById('termBody');
+let fi = 0;
+function pushLine(){
+  const l = feedLines[fi % feedLines.length];
+  const div = document.createElement('div');
+  div.className = 'ln';
+  div.innerHTML = `<span class="p">${l.p}</span> <span class="${l.cls}">${l.t}</span>`;
+  termBody.appendChild(div);
+  const lines = termBody.querySelectorAll('.ln');
+  if(lines.length > 10) lines[0].remove();
+  termBody.scrollTop = termBody.scrollHeight;
+  fi++;
+}
+for(let i=0;i<6;i++) pushLine();
+setInterval(pushLine, 1800);
+
+/* ================= HERO WIDGET WIRING ================= */
+document.querySelectorAll('#hero .hbtn').forEach(btn=>{
+  btn.addEventListener('click', ()=> openWin(btn.dataset.open));
+});
+document.getElementById('heroClose').addEventListener('click', ()=>{
+  document.getElementById('hero').classList.add('hidden');
+});
+
+/* ================= HERO ROLE TYPEWRITER ================= */
+const heroRoles = [
+  "ethical hacker in training",
+  "OSINT researcher",
+  "network defender",
+  "XDR & threat analysis enthusiast",
+  "TryHackMe: BhaveshXDR"
+];
+const heroRoleEl = document.getElementById('heroRole');
+let hri = 0, hci = 0, hdel = false;
+function heroTypeLoop(){
+  const cur = heroRoles[hri];
+  if(!hdel){
+    hci++;
+    heroRoleEl.innerHTML = "&gt; " + cur.slice(0,hci) + '<span class="caret"></span>';
+    if(hci === cur.length){ hdel = true; setTimeout(heroTypeLoop, 1400); return; }
+  } else {
+    hci--;
+    heroRoleEl.innerHTML = "&gt; " + cur.slice(0,hci) + '<span class="caret"></span>';
+    if(hci === 0){ hdel = false; hri = (hri+1) % heroRoles.length; }
+  }
+  setTimeout(heroTypeLoop, hdel ? 35 : 55);
+}
+heroTypeLoop();
+
+/* ================= MATRIX RAIN BACKDROP ================= */
+(function(){
+  const canvas = document.getElementById('matrix');
+  const ctx = canvas.getContext('2d');
+  const chars = "01アイウエオカキクケコ ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+  const fontSize = 14;
+  let columns, drops;
+  function resize(){
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+    columns = Math.floor(canvas.width / fontSize);
+    drops = new Array(columns).fill(0).map(()=> Math.random()*-50);
+  }
+  resize();
+  window.addEventListener('resize', resize);
+  function draw(){
+    ctx.fillStyle = 'rgba(5,8,10,0.09)';
+    ctx.fillRect(0,0,canvas.width,canvas.height);
+    ctx.fillStyle = 'rgba(94,231,209,0.5)';
+    ctx.font = fontSize + 'px monospace';
+    for(let i=0;i<drops.length;i++){
+      const text = chars[Math.floor(Math.random()*chars.length)];
+      ctx.fillText(text, i*fontSize, drops[i]*fontSize);
+      if(drops[i]*fontSize > canvas.height && Math.random() > 0.975) drops[i] = 0;
+      drops[i]++;
+    }
+  }
+  setInterval(draw, 60);
+})();
+
+/* ================= RESUME PRINT ================= */
+document.getElementById('printResumeBtn').addEventListener('click', ()=>{
+  const content = document.querySelector('#win-resume .win-body').innerHTML;
+  const w = window.open('', '_blank');
+  w.document.write(`
+    <html><head><title>Bhavesh Kumawat — Resume</title>
+    <style>
+      body{font-family:'Courier New',monospace;color:#111;padding:40px;max-width:700px;margin:0 auto;line-height:1.5;}
+      h3{margin:20px 0 8px;text-transform:uppercase;letter-spacing:1px;font-size:13px;color:#333;}
+      p{margin-bottom:10px;font-size:13px;}
+      .res-head{border-bottom:2px solid #111;padding-bottom:14px;margin-bottom:16px;}
+      .res-head .rn{font-size:22px;font-weight:800;}
+      .res-head .rr{font-size:13px;margin-top:4px;}
+      .res-head .rc{font-size:11px;color:#555;margin-top:8px;}
+    </style></head><body>${content}</body></html>
+  `);
+  w.document.close();
+  setTimeout(()=> w.print(), 300);
+});
+
+/* ================= ASK-ME TERMINAL ================= */
+function getQaEntries(){
+  return Array.from(document.querySelectorAll('#qaStore .qa-item')).map(el=>({
+    keywords: (el.dataset.keywords || '').toLowerCase().split(',').map(s=>s.trim()).filter(Boolean),
+    answer: el.innerHTML
+  }));
+}
+function askPrint(role, html){
+  const out = document.getElementById('askOut');
+  const div = document.createElement('div');
+  div.className = role === 'q' ? 'qline' : 'aline';
+  div.innerHTML = (role === 'q' ? '&gt; ' : '') + html;
+  out.appendChild(div);
+  out.scrollTop = out.scrollHeight;
+}
+askPrint('a', "Hi, I'm an assistant trained on Bhavesh's profile. Ask me about his skills, education, certs, or how to reach him.");
+document.getElementById('askForm').addEventListener('submit', e=>{
+  e.preventDefault();
+  const input = document.getElementById('askInput');
+  const q = input.value.trim();
+  if(!q) return;
+  askPrint('q', q);
+  const ql = q.toLowerCase();
+  const entries = getQaEntries();
+  let match = null;
+  for(const entry of entries){
+    if(entry.keywords.some(k => k && ql.includes(k))){ match = entry; break; }
+  }
+  setTimeout(()=>{
+    if(match){
+      askPrint('a', match.answer);
+    } else {
+      askPrint('a', "I don't have an answer for that — try the <b>contact.sh</b> section to ask Bhavesh directly. <span style=\"color:var(--cyan);cursor:pointer;text-decoration:underline;\" onclick=\"openWin('contact')\">Open contact.sh →</span>");
+    }
+  }, 350);
+  input.value = '';
+});
+
+/* ================= GAME: PACKET INTERCEPT ================= */
+(function(){
+  const area = document.getElementById('gameArea');
+  const overlay = document.getElementById('gameOverlay');
+  const scoreEl = document.getElementById('gScore');
+  const livesEl = document.getElementById('gLives');
+  const startBtn = document.getElementById('gStartBtn');
+  const icons = ['🐛','🦠','💀','🔓'];
+  let score = 0, lives = 3, running = false, spawnTimer = null, moveTimer = null;
+  let threats = [];
+
+  function spawnThreat(){
+    const el = document.createElement('div');
+    el.className = 'threat';
+    el.textContent = icons[Math.floor(Math.random()*icons.length)];
+    const areaW = area.clientWidth;
+    const x = Math.random() * (areaW - 30);
+    el.style.left = x + 'px';
+    el.style.top = '-24px';
+    area.appendChild(el);
+    const t = { el, y: -24, speed: 0.6 + Math.random()*0.8 };
+    el.addEventListener('click', ()=>{
+      if(!running) return;
+      score++;
+      scoreEl.textContent = score;
+      t.dead = true;
+      el.remove();
+    });
+    threats.push(t);
+  }
+
+  function loop(){
+    if(!running) return;
+    threats.forEach(t=>{
+      if(t.dead) return;
+      t.y += t.speed;
+      t.el.style.top = t.y + 'px';
+      if(t.y > area.clientHeight - 20){
+        t.dead = true;
+        t.el.remove();
+        lives--;
+        livesEl.textContent = lives;
+        if(lives <= 0){ endGame(); }
+      }
+    });
+    threats = threats.filter(t=> !t.dead);
+    moveTimer = requestAnimationFrame(loop);
+  }
+
+  function startGame(){
+    score = 0; lives = 3;
+    scoreEl.textContent = score; livesEl.textContent = lives;
+    threats.forEach(t=> t.el.remove());
+    threats = [];
+    running = true;
+    overlay.style.display = 'none';
+    spawnTimer = setInterval(spawnThreat, 850);
+    moveTimer = requestAnimationFrame(loop);
+  }
+
+  function endGame(){
+    running = false;
+    clearInterval(spawnTimer);
+    cancelAnimationFrame(moveTimer);
+    threats.forEach(t=> t.el.remove());
+    threats = [];
+    overlay.innerHTML = `<div class="got">Firewall breached</div><div class="gos">Final score: ${score}</div><button class="btn" id="gStartBtn2">↻ Play again</button>`;
+    overlay.style.display = 'flex';
+    document.getElementById('gStartBtn2').addEventListener('click', startGame);
+  }
+
+  startBtn.addEventListener('click', startGame);
+})();
+
+/* ================= ADMIN SYSTEM ================= */
+const ADMIN_KEY_PW = 'xdros_admin_pw';
+const ADMIN_KEY_CONTENT = 'xdros_content';
+const ADMIN_KEY_QA = 'xdros_qa';
+function getAdminPw(){ return localStorage.getItem(ADMIN_KEY_PW) || 'bhavesh123'; }
+let isAdmin = false;
+let editMode = false;
+
+function showModal(id){ document.getElementById(id).classList.add('open'); }
+function hideModal(id){ document.getElementById(id).classList.remove('open'); }
+
+const adminBtn = document.getElementById('adminbtn');
+function triggerAdminEntry(){
+  if(isAdmin){
+    openWin('adminpanel');
+  } else {
+    document.getElementById('loginErr').textContent = '';
+    document.getElementById('loginPw').value = '';
+    showModal('loginModal');
+  }
+}
+adminBtn.addEventListener('click', triggerAdminEntry);
+
+/* secret entry: tap the clock 5x within 2s to reveal admin login */
+(function(){
+  const clock = document.getElementById('clockwrap');
+  let taps = 0, tapTimer = null;
+  clock.addEventListener('click', ()=>{
+    taps++;
+    clearTimeout(tapTimer);
+    tapTimer = setTimeout(()=>{ taps = 0; }, 2000);
+    if(taps >= 5){
+      taps = 0;
+      clearTimeout(tapTimer);
+      triggerAdminEntry();
+    }
+  });
+})();
+document.getElementById('loginCancel').addEventListener('click', ()=> hideModal('loginModal'));
+document.getElementById('loginSubmit').addEventListener('click', doLogin);
+document.getElementById('loginPw').addEventListener('keydown', e=>{ if(e.key === 'Enter') doLogin(); });
+function doLogin(){
+  const val = document.getElementById('loginPw').value;
+  if(val === getAdminPw()){
+    isAdmin = true;
+    adminBtn.classList.add('logged');
+    hideModal('loginModal');
+    renderQaAdmin();
+    openWin('adminpanel');
+  } else {
+    document.getElementById('loginErr').textContent = 'Incorrect password. (default: bhavesh123)';
+  }
+}
+document.getElementById('logoutBtn').addEventListener('click', ()=>{
+  isAdmin = false;
+  editMode = false;
+  adminBtn.classList.remove('logged');
+  document.getElementById('editbanner').classList.remove('show');
+  document.querySelectorAll('.win-body.editable').forEach(el=> el.setAttribute('contenteditable','false'));
+  closeWin('adminpanel');
+});
+
+/* edit mode toggle */
+const toggleEditBtn = document.getElementById('toggleEditBtn');
+toggleEditBtn.addEventListener('click', ()=>{
+  editMode = !editMode;
+  document.querySelectorAll('.win-body.editable').forEach(el=> el.setAttribute('contenteditable', editMode ? 'true' : 'false'));
+  document.getElementById('editbanner').classList.toggle('show', editMode);
+  toggleEditBtn.textContent = editMode ? '✅ Turn Edit Mode OFF' : '✏️ Turn Edit Mode ON';
+});
+
+/* autosave editable content to localStorage on edit */
+document.querySelectorAll('.win-body.editable').forEach(el=>{
+  el.addEventListener('input', ()=>{
+    const id = el.closest('.win').id;
+    const stored = JSON.parse(localStorage.getItem(ADMIN_KEY_CONTENT) || '{}');
+    stored[id] = el.innerHTML;
+    localStorage.setItem(ADMIN_KEY_CONTENT, JSON.stringify(stored));
+  });
+});
+/* restore saved content on load */
+(function restoreContent(){
+  const stored = JSON.parse(localStorage.getItem(ADMIN_KEY_CONTENT) || '{}');
+  Object.keys(stored).forEach(winId=>{
+    const el = document.querySelector('#'+winId+' .win-body.editable');
+    if(el) el.innerHTML = stored[winId];
+  });
+})();
+
+/* Q&A admin management */
+function renderQaAdmin(){
+  const list = document.getElementById('qaList');
+  list.innerHTML = '';
+  document.querySelectorAll('#qaStore .qa-item').forEach((item, idx)=>{
+    const box = document.createElement('div');
+    box.className = 'qa-entry';
+    box.innerHTML = `
+      <span class="qa-del" data-idx="${idx}">✕ remove</span>
+      <label>Keywords (comma separated)</label>
+      <div class="qa-k" contenteditable="true">${item.dataset.keywords}</div>
+      <label>Answer</label>
+      <div class="qa-a" contenteditable="true">${item.innerHTML}</div>
+    `;
+    box.querySelector('.qa-k').addEventListener('input', e=>{ item.dataset.keywords = e.target.textContent; saveQa(); });
+    box.querySelector('.qa-a').addEventListener('input', e=>{ item.innerHTML = e.target.innerHTML; saveQa(); });
+    box.querySelector('.qa-del').addEventListener('click', ()=>{ item.remove(); renderQaAdmin(); saveQa(); });
+    list.appendChild(box);
+  });
+}
+function saveQa(){
+  localStorage.setItem(ADMIN_KEY_QA, document.getElementById('qaStore').innerHTML);
+}
+document.getElementById('addQaBtn').addEventListener('click', ()=>{
+  const store = document.getElementById('qaStore');
+  const div = document.createElement('div');
+  div.className = 'qa-item';
+  div.dataset.keywords = 'new keyword';
+  div.innerHTML = 'New answer text...';
+  store.appendChild(div);
+  renderQaAdmin();
+  saveQa();
+});
+/* restore saved QA on load */
+(function restoreQa(){
+  const saved = localStorage.getItem(ADMIN_KEY_QA);
+  if(saved) document.getElementById('qaStore').innerHTML = saved;
+})();
+
+/* change password */
+document.getElementById('changePwBtn').addEventListener('click', ()=>{
+  document.getElementById('newPw1').value = '';
+  document.getElementById('newPw2').value = '';
+  document.getElementById('pwErr').textContent = '';
+  showModal('pwModal');
+});
+document.getElementById('pwCancel').addEventListener('click', ()=> hideModal('pwModal'));
+document.getElementById('pwSubmit').addEventListener('click', ()=>{
+  const p1 = document.getElementById('newPw1').value;
+  const p2 = document.getElementById('newPw2').value;
+  if(p1.length < 4){ document.getElementById('pwErr').textContent = 'Use at least 4 characters.'; return; }
+  if(p1 !== p2){ document.getElementById('pwErr').textContent = 'Passwords do not match.'; return; }
+  localStorage.setItem(ADMIN_KEY_PW, p1);
+  hideModal('pwModal');
+});
+
+/* reset to default */
+document.getElementById('resetBtn').addEventListener('click', ()=>{
+  if(confirm('Reset all edited content and Q&A back to defaults? This clears saved changes in this browser.')){
+    localStorage.removeItem(ADMIN_KEY_CONTENT);
+    localStorage.removeItem(ADMIN_KEY_QA);
+    location.reload();
+  }
+});
+
+/* export updated HTML */
+document.getElementById('exportBtn').addEventListener('click', ()=>{
+  const clone = document.documentElement.cloneNode(true);
+  clone.querySelectorAll('.win-body.editable').forEach(el=> el.removeAttribute('contenteditable'));
+  clone.querySelectorAll('.modal-overlay').forEach(el=> el.classList.remove('open'));
+  const editBanner = clone.querySelector('#editbanner');
+  if(editBanner) editBanner.classList.remove('show');
+  const adminPanel = clone.querySelector('#win-adminpanel');
+  if(adminPanel){ adminPanel.classList.add('closed'); }
+  const boot = clone.querySelector('#boot');
+  if(boot){ boot.removeAttribute('style'); boot.classList.remove('hide'); boot.querySelector('#boot-lines').innerHTML = ''; }
+  const desk = clone.querySelector('#desktop');
+  if(desk) desk.classList.remove('show');
+  const tb = clone.querySelector('#taskbar');
+  if(tb) tb.classList.remove('show');
+  clone.querySelectorAll('.win').forEach(el=> el.classList.add('closed'));
+  clone.querySelectorAll('.icon.active').forEach(el=> el.classList.remove('active'));
+  const html = '<!DOCTYPE html>\n' + clone.outerHTML;
+  const blob = new Blob([html], {type:'text/html'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'index.html';
+  a.click();
+  URL.revokeObjectURL(url);
+});
+</script>
+
+</body>
+</html>
